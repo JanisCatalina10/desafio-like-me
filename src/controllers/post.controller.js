@@ -1,4 +1,5 @@
-import { getPostsFromDb, createPostInDb } from '../models/post.models.js';
+import { getPostsFromDb, createPostInDb, setPost, destroyPost } from '../models/post.models.js';
+import { findError } from '../utils/find.error.utils.js';
 
 // Controlador para obtener todos los posts
 const getAllPosts = async (req, res) => {
@@ -6,8 +7,10 @@ const getAllPosts = async (req, res) => {
     const posts = await getPostsFromDb();
     res.status(200).json({ posts });
   } catch (error) {
-    console.error('Error al obtener los posts:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    const errorFound = findError(error.code);
+    return res
+    .status(errorFound[0].status)
+    .json({error: errorFound[0].message, type: errorFound[0].type });
   }
 };
 
@@ -18,9 +21,41 @@ const createPost = async (req, res) => {
     const newPost = await createPostInDb(titulo, img, descripcion, likes);
     res.status(201).json(newPost);
   } catch (error) {
-    console.error('Error al crear el post:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    const errorFound = findError(error.code);
+    return res
+    .status(errorFound[0].status)
+    .json({error: errorFound[0].message, type: errorFound[0].type });
   }
 };
 
-export { getAllPosts, createPost };
+// Controlador para actualizar un post
+const updatePost = async (req, res) => {
+  try {
+    const {post_id} = req.params;
+    const { titulo, img, descripcion, likes } = req.body;
+    const oldPost = req.oldData;
+    const post = await setPost(titulo, img, descripcion, likes, post_id, oldPost);
+    res.status(201).json(post);
+  } catch (error) {
+    const errorFound = findError(error.code);
+    return res
+    .status(errorFound[0].status)
+    .json({error: errorFound[0].message, type: errorFound[0].type });
+  }
+}
+
+//controlador para borrar un post
+const deletePost = async (req, res) => {
+  try {
+    const {post_id} = req.params;
+    const post = await destroyPost(post_id);
+    res.status(204).json({message:"post eliminado con éxito", row: post});
+  } catch (error) {
+    const errorFound = findError(error.code);
+    return res
+    .status(errorFound[0].status)
+    .json({error: errorFound[0].message, type: errorFound[0].type });
+  }
+}
+
+export { getAllPosts, createPost, updatePost, deletePost };
